@@ -1,0 +1,19 @@
+[tool.poetry]
+name = "calibrate-binding-energy-ldm"
+version = "0.1.0"
+description = ""
+authors = ["Brandon Henke <brandon.henke3@gmail.com>"]
+readme = "README.md"
+packages = [{include = "calibrate_binding_energy_ldm"}]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.12"
+numpy = "^1.24.1"
+pandas = "^1.5.3"
+matplotlib = "^3.6.3"
+scipy = "^1.10.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
