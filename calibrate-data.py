@@ -4,32 +4,18 @@ import scipy.sparse as sps
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 
-from scipy.optimize import leastsq,fmin
+from scipy.optimize import least_squares
 
 def BLDM(N,Z):
 	A = N+Z
 	B = np.array([A,-A**(2/3),-(N-Z)**2/A,-Z**2/A**(1/3)])[:,:,0].T
+	# B /= A
 	return B
 
-def hessian(x):
-	"""
-	Calculate the hessian matrix with finite differences
-	Parameters:
-		- x : ndarray
-	Returns:
-		an array of shape (x.dim, x.ndim) + x.shape
-		where the array[i, j, ...] corresponds to the second derivative x_ij
-	"""
-	x_grad = np.gradient(x) 
-	hessian = np.empty((x.ndim, x.ndim) + x.shape, dtype=x.dtype) 
-	for k, grad_k in enumerate(x_grad):
-		# iterate over dimensions
-		# apply gradient again to every component of the first derivative.
-		tmp_grad = np.gradient(grad_k) 
-		for l, grad_kl in enumerate(tmp_grad):
-			hessian[k, l, :, :] = grad_kl
-	return hessian
-
+def residuals(params,B,Y):
+	β = np.array(params).reshape(len(params),1)
+	ret = Y-B@β
+	return ret
 
 def main():
 	col_names=[
@@ -51,15 +37,40 @@ def main():
 
 	B = BLDM(N,Z)
 
-	p = np.linalg.inv(B.T@B)@B.T@Y
-	print("Best fit parameters:")
-	print(p.T)
+	β	= np.linalg.inv(B.T@B)@B.T@Y
+	H	= 2*B.T@B
+	r	= residuals(β,B,Y)
+	s_2	= (r.T@r)/(len(Y)-len(β))
+	C	= s_2*np.linalg.inv(B.T@B)
+	cH	= H
+	for a in range(H.shape[0]):
+		for b in range(H.shape[1]):
+			cH *= H[a,a]**(-1/2)*H[b,b]**(-1/2)
 
-	H = hessian(B@p)
-
+	print("Best fit parameters (manual):")
+	print(β.T)
+	print("Reduced χ^2:")
+	print(s_2)
+	print("Hessian:")
+	print(H)
+	print("Covariance Matrix:")
+	print(C)
+	print("Conditioned Hessian:")
+	print(cH)
+	print("Conditioned Hessian Eigenvalues:")
+	print(np.linalg.eig(cH)[0])
+	
+	N	 = np.array(data["N"]).reshape(len(data["N"]),1)
+	Z	 = np.array(data["Z"]).reshape(len(data["Z"]),1)
+	Y	 = np.array(data["B/A"]).reshape(len(data["B/A"]),1)
+	A	 = N+Z
+	Y	*= A
+	B	 = BLDM(N,Z)
+	r	 = residuals(β,B,Y)
+	
 	datmat = sps.csr_array(
 		(
-			(Y-B@p)[:,0],
+			r[:,0],
 			(Z[:,0],N[:,0])
 		),
 		# shape=(
@@ -82,7 +93,7 @@ def main():
 
 	fig2 = plt.figure(figsize=(16,9))
 	plt.scatter(A,Y/A)
-	plt.plot(A,B@p/A)
+	plt.plot(A,B@β/A)
 	plt.xlabel("Number of nucleons (A)")
 	plt.ylabel("Binding energy per nucleon (B/A)")
 	plt.savefig("figure2.png",dpi=600)
