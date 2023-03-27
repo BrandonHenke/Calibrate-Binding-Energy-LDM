@@ -36,16 +36,20 @@ def main():
 	Y *= A
 
 	B = BLDM(N,Z)
-
+	
 	β	= np.linalg.inv(B.T@B)@B.T@Y
 	H	= 2*B.T@B
 	r	= residuals(β,B,Y)
-	s_2	= (r.T@r)/(len(Y)-len(β))
-	C	= s_2*np.linalg.inv(B.T@B)
-	cH	= H
+	s_2	= ((r.T@r)/(len(Y)-len(β)))[0,0]
+	C	= s_2*np.linalg.inv(H)
+	Cor = np.array(C)
+	for a in range(Cor.shape[0]):
+		for b in range(Cor.shape[1]):
+			Cor[a,b] /= np.sqrt(C[a,a]*C[b,b])
+	cH	= np.array(H)
 	for a in range(H.shape[0]):
 		for b in range(H.shape[1]):
-			cH *= H[a,a]**(-1/2)*H[b,b]**(-1/2)
+			cH[a,b] /= np.sqrt(H[a,a]*H[b,b])
 
 	print("Best fit parameters (manual):")
 	print(β.T)
@@ -55,6 +59,8 @@ def main():
 	print(H)
 	print("Covariance Matrix:")
 	print(C)
+	print("Matrix of Correlation:")
+	print(Cor)
 	print("Conditioned Hessian:")
 	print(cH)
 	print("Conditioned Hessian Eigenvalues:")
@@ -92,7 +98,7 @@ def main():
 	plt.savefig("figure.png",dpi=600)
 
 	fig2 = plt.figure(figsize=(16,9))
-	plt.scatter(A,Y/A)
+	# plt.scatter(A,Y)
 	plt.plot(A,B@β/A)
 	plt.xlabel("Number of nucleons (A)")
 	plt.ylabel("Binding energy per nucleon (B/A)")
